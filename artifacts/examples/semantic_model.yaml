@@ -1,0 +1,37 @@
+name: messy_orders semantic model
+version: 1
+dataset_id: example
+entities:
+  - name: messy_orders
+    source_dataset_id: example
+    primary_key: order_id
+    fields:
+      - source_column: order_id
+        name: Order Id
+        type: String
+        role: entity_key
+        description: Mapped from source column 'order_id'.
+      - source_column: order_date
+        name: Order Date
+        type: Date
+        role: time
+        description: Mapped from source column 'order_date'.
+      - source_column: revenue
+        name: Revenue
+        type: Float64
+        role: measure
+        description: Mapped from source column 'revenue'.
+metrics:
+  - name: sum_revenue
+    label: Total Revenue
+    expression: sum(revenue)
+    aggregation: sum
+    source_column: revenue
+    grain: dataset
+    owner: unassigned
+    warnings:
+      - Generated from numeric source field; confirm the additive grain.
+joins: []
+warnings:
+  - Semantic model is generated as a draft. Owners must approve business naming and metric grain.
+

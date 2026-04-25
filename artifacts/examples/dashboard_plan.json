@@ -1,0 +1,28 @@
+{
+  "goal": "Monitor revenue, cost, units, and operational exceptions.",
+  "kpis": [
+    {
+      "name": "sum_revenue",
+      "metric_expression": "sum(revenue)",
+      "business_question": "Track Total Revenue for: Monitor revenue, cost, units, and operational exceptions.",
+      "aggregation": "sum",
+      "confidence": 0.74,
+      "warnings": ["Generated from numeric source field; confirm the additive grain."]
+    }
+  ],
+  "charts": [
+    {
+      "title": "Total Revenue",
+      "chart_type": "line",
+      "metric": "sum_revenue",
+      "dimension": "region",
+      "time_dimension": "order_date",
+      "filters": ["region", "channel", "status"],
+      "drilldowns": ["region", "channel", "status"],
+      "rationale": "Uses governed metric expression and available semantic dimensions."
+    }
+  ],
+  "layout": [],
+  "warnings": []
+}
+

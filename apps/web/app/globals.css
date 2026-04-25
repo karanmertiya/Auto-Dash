@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: #eef2f6;
+  color: #171717;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+code,
+pre {
+  font-feature-settings: "liga" 0;
+}
+
+.focus-ring {
+  @apply focus:outline-none focus:shadow-focus;
+}
+
