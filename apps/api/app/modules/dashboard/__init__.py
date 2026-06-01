@@ -1,2 +1,0 @@
-"""Dashboard generation layer."""
-

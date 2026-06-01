@@ -1,2 +1,0 @@
-"""Collaboration and governance layer."""
-

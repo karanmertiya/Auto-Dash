@@ -1,18 +1,33 @@
 {
-  "name": "dashforge-core",
-  "private": true,
+  "name": "auto-dash",
   "version": "0.1.0",
-  "description": "Expert-in-the-loop data-to-dashboard accelerator monorepo.",
+  "private": true,
   "scripts": {
-    "dev:web": "pnpm --filter @dashforge/web dev",
-    "build:web": "pnpm --filter @dashforge/web build",
-    "lint:web": "pnpm --filter @dashforge/web lint",
-    "test:api": "cd apps/api && pytest",
-    "dev:api": "cd apps/api && uvicorn app.main:app --reload --port 8000"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "workspaces": [
-    "apps/web"
-  ],
-  "packageManager": "pnpm@9.12.0"
+  "dependencies": {
+    "@tailwindcss/forms": "^0.5.9",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "^15.0.0",
+    "papaparse": "^5.5.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.13.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.15.0",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.3"
+  }
 }
-

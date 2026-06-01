@@ -11,6 +11,14 @@ const config: Config = {
       },
       boxShadow: {
         focus: "0 0 0 3px rgba(14, 116, 144, 0.18)"
+      },
+      keyframes: {
+        shimmer: {
+          "100%": { transform: "translateX(100%)" }
+        }
+      },
+      animation: {
+        shimmer: "shimmer 1.5s infinite"
       }
     }
   },
