@@ -58,13 +58,19 @@ export default function DashboardPage() {
               skipEmptyLines: true,
               complete: (results) => {
                 if (results.errors.length > 0 && results.data.length === 0) {
-                  reject(new Error(`Error parsing ${file.name}`));
+                  console.warn(`Skipping ${file.name} due to parsing errors.`);
+                  resolve([]);
                   return;
                 }
                 const parsed = results.data as Record<string, unknown>[];
-                resolve(parsed.map(row => ({ ...row, Source_File: file.name })));
+                // Filter out completely empty rows
+                const validRows = parsed.filter(row => Object.values(row).some(val => val !== null && val !== ''));
+                resolve(validRows.map(row => ({ ...row, Source_File: file.name })));
               },
-              error: (err: any) => reject(new Error(err.message))
+              error: (err: any) => {
+                console.warn(`Skipping ${file.name} due to error:`, err);
+                resolve([]);
+              }
             });
           };
           reader.readAsText(file);
