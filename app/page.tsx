@@ -31,37 +31,51 @@ export default function DashboardPage() {
     setFileName(file.name);
     setError("");
 
-    Papa.parse(file, {
-      header: true,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.errors.length > 0) {
-          setError("Error parsing CSV. Please check the format.");
-          return;
-        }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let text = e.target?.result as string;
+      
+      // Heuristic to handle LinkedIn exports or files with metadata headers:
+      // Skip lines until we find one with multiple commas (likely the true CSV header)
+      const lines = text.split(/\r?\n/);
+      const headerIndex = lines.findIndex(line => (line.match(/,/g) || []).length >= 2);
+      if (headerIndex > 0) {
+        text = lines.slice(headerIndex).join('\n');
+      }
 
-        const parsedData = results.data as Record<string, unknown>[];
-        if (parsedData.length === 0) {
-          setError("CSV is empty.");
-          return;
-        }
+      Papa.parse(text, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.errors.length > 0 && results.data.length === 0) {
+            setError("Error parsing CSV. Please check the format.");
+            return;
+          }
 
-        const cleanedData = cleanData(parsedData);
-        if (cleanedData.length === 0) {
-          setError("No usable rows remained after cleaning.");
-          return;
-        }
+          const parsedData = results.data as Record<string, unknown>[];
+          if (parsedData.length === 0) {
+            setError("CSV is empty.");
+            return;
+          }
 
-        const headers = Object.keys(cleanedData[0] as object);
-        setRawRowCount(parsedData.length);
-        setColumns(headers);
-        setData(cleanedData);
-      },
-      error: (err) => {
-        setError(err.message);
-      },
-    });
+          const cleanedData = cleanData(parsedData);
+          if (cleanedData.length === 0) {
+            setError("No usable rows remained after cleaning.");
+            return;
+          }
+
+          const headers = Object.keys(cleanedData[0] as object);
+          setRawRowCount(parsedData.length);
+          setColumns(headers);
+          setData(cleanedData);
+        },
+        error: (err) => {
+          setError(err.message);
+        },
+      });
+    };
+    reader.readAsText(file);
   };
 
   // Find a category column (string) and a metric column (number)
