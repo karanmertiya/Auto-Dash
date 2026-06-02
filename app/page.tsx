@@ -84,6 +84,7 @@ export default function DashboardPage() {
 
     let categoryKey = "";
     let metricKey = "";
+    let hasNumericMetric = false;
 
     // Naive heuristic: find first string column and first number column
     for (const col of columns) {
@@ -92,28 +93,43 @@ export default function DashboardPage() {
       }
       if (!metricKey && typeof data[0][col] === "number") {
         metricKey = col;
+        hasNumericMetric = true;
       }
     }
 
     // Fallback if no string column
     if (!categoryKey) categoryKey = columns[0];
-    if (!metricKey) metricKey = columns[1] || columns[0];
 
     // Aggregate data for the bar chart
     const aggregated: Record<string, number> = {};
-    data.forEach((row) => {
-      const cat = row[categoryKey];
-      const val = row[metricKey];
-      if (cat !== undefined && val !== undefined) {
-        const catStr = String(cat);
-        aggregated[catStr] = (aggregated[catStr] || 0) + Number(val);
-      }
-    });
 
-    const chartData = Object.keys(aggregated).map((key) => ({
-      [categoryKey]: key,
-      [metricKey]: aggregated[key],
-    })).slice(0, 20); // Limit to top 20 for readability
+    if (hasNumericMetric) {
+      data.forEach((row) => {
+        const cat = row[categoryKey];
+        const val = row[metricKey];
+        if (cat !== undefined && val !== undefined) {
+          const catStr = String(cat);
+          aggregated[catStr] = (aggregated[catStr] || 0) + Number(val);
+        }
+      });
+    } else {
+      metricKey = "Count";
+      data.forEach((row) => {
+        const cat = row[categoryKey];
+        if (cat !== undefined) {
+          const catStr = String(cat);
+          aggregated[catStr] = (aggregated[catStr] || 0) + 1;
+        }
+      });
+    }
+
+    const chartData = Object.keys(aggregated)
+      .map((key) => ({
+        [categoryKey]: key,
+        [metricKey]: aggregated[key],
+      }))
+      .sort((a, b) => b[metricKey] - a[metricKey]) // Sort by highest count/metric
+      .slice(0, 20); // Limit to top 20 for readability
 
     return { categoryKey, metricKey, chartData };
   };
