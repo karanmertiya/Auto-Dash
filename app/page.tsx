@@ -128,7 +128,7 @@ export default function DashboardPage() {
         [categoryKey]: key,
         [metricKey]: aggregated[key],
       }))
-      .sort((a, b) => b[metricKey] - a[metricKey]) // Sort by highest count/metric
+      .sort((a, b) => (b[metricKey] as number) - (a[metricKey] as number)) // Sort by highest count/metric
       .slice(0, 20); // Limit to top 20 for readability
 
     return { categoryKey, metricKey, chartData };
