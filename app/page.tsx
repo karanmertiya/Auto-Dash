@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Papa from "papaparse";
 import { UploadCloud, BarChart2, TrendingUp, AlertCircle } from "lucide-react";
+import { cleanData } from "@/lib/data-cleaner";
 import {
   BarChart,
   Bar,
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
+  const [rawRowCount, setRawRowCount] = useState(0);
 
   const onFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -39,15 +41,22 @@ export default function DashboardPage() {
           return;
         }
 
-        const parsedData = results.data;
+        const parsedData = results.data as Record<string, unknown>[];
         if (parsedData.length === 0) {
           setError("CSV is empty.");
           return;
         }
 
-        const headers = Object.keys(parsedData[0] as object);
+        const cleanedData = cleanData(parsedData);
+        if (cleanedData.length === 0) {
+          setError("No usable rows remained after cleaning.");
+          return;
+        }
+
+        const headers = Object.keys(cleanedData[0] as object);
+        setRawRowCount(parsedData.length);
         setColumns(headers);
-        setData(parsedData);
+        setData(cleanedData);
       },
       error: (err) => {
         setError(err.message);
@@ -140,11 +149,17 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h2 className="text-sm font-bold">{fileName}</h2>
-                  <p className="text-xs text-slate-500">{data.length} rows loaded successfully</p>
+                  <p className="text-xs text-slate-500">
+                    {data.length} clean rows loaded
+                    {rawRowCount > data.length ? ` from ${rawRowCount} parsed rows` : ""}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => setData([])}
+                onClick={() => {
+                  setData([]);
+                  setRawRowCount(0);
+                }}
                 className="rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
               >
                 Upload New File

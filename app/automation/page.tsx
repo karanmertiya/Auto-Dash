@@ -14,6 +14,7 @@ interface Node {
 }
 
 const actionTypes = [
+  { title: "Extreme Data Sanitize", icon: Zap, config: "Deduplicate, impute nulls, normalize dates, trim/case text, drop z-score outliers" },
   { title: "RAG Document Retrieval", icon: FileSearch, config: "Query Vector Database (Pinecone)" },
   { title: "LLM Reasoning Engine", icon: Bot, config: "Analyze with GPT-4o" },
   { title: "Agentic Autonomous Decision", icon: Sparkles, config: "Determine next step" },
