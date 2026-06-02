@@ -70,7 +70,7 @@ export default function DashboardPage() {
           setColumns(headers);
           setData(cleanedData);
         },
-        error: (err) => {
+        error: (err: any) => {
           setError(err.message);
         },
       });
