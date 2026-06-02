@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Papa from "papaparse";
-import { UploadCloud, BarChart2, TrendingUp, AlertCircle } from "lucide-react";
+import { UploadCloud, BarChart2, TrendingUp, AlertCircle, Bot, FileText, Loader2 } from "lucide-react";
 import { cleanData } from "@/lib/data-cleaner";
 import {
   BarChart,
@@ -23,6 +23,10 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const [rawRowCount, setRawRowCount] = useState(0);
+  
+  // AI Report State
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [aiReport, setAiReport] = useState<string | null>(null);
 
   const onFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -30,13 +34,12 @@ export default function DashboardPage() {
 
     setFileName(file.name);
     setError("");
+    setAiReport(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
       let text = e.target?.result as string;
       
-      // Heuristic to handle LinkedIn exports or files with metadata headers:
-      // Skip lines until we find one with multiple commas (likely the true CSV header)
       const lines = text.split(/\r?\n/);
       const headerIndex = lines.findIndex(line => (line.match(/,/g) || []).length >= 2);
       if (headerIndex > 0) {
@@ -78,7 +81,6 @@ export default function DashboardPage() {
     reader.readAsText(file);
   };
 
-  // Find a category column (string) and a metric column (number)
   const getChartData = () => {
     if (data.length === 0) return { categoryKey: "", metricKey: "", chartData: [] };
 
@@ -86,7 +88,6 @@ export default function DashboardPage() {
     let metricKey = "";
     let hasNumericMetric = false;
 
-    // Naive heuristic: find first string column and first number column
     for (const col of columns) {
       if (!categoryKey && typeof data[0][col] === "string") {
         categoryKey = col;
@@ -97,10 +98,8 @@ export default function DashboardPage() {
       }
     }
 
-    // Fallback if no string column
     if (!categoryKey) categoryKey = columns[0];
 
-    // Aggregate data for the bar chart
     const aggregated: Record<string, number> = {};
 
     if (hasNumericMetric) {
@@ -128,10 +127,54 @@ export default function DashboardPage() {
         [categoryKey]: key,
         [metricKey]: aggregated[key],
       }))
-      .sort((a, b) => (b[metricKey] as number) - (a[metricKey] as number)) // Sort by highest count/metric
-      .slice(0, 20); // Limit to top 20 for readability
+      .sort((a, b) => (b[metricKey] as number) - (a[metricKey] as number))
+      .slice(0, 20);
 
     return { categoryKey, metricKey, chartData };
+  };
+
+  const generateAIReport = async () => {
+    setIsGeneratingReport(true);
+    setError("");
+    
+    try {
+      const datasetId = "dataset_" + Date.now();
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const uploadRes = await fetch(`${apiUrl}/api/data-agent/upload-dataset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          datasetId: datasetId,
+          data: data
+        })
+      });
+      
+      if (!uploadRes.ok) throw new Error("Failed to upload dataset to Agent Backend.");
+
+      // Step 2: Trigger recursive analysis (Job Recommendation mode as default for this demo)
+      const query = "Analyze this dataset and generate a comprehensive Job Recommendation report. Identify the top companies and positions the users are associated with, and recommend targeted job search strategies.";
+      
+      const analyzeRes = await fetch(`${apiUrl}/api/data-agent/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          datasetId: datasetId,
+          query: query
+        })
+      });
+
+      const analysisData = await analyzeRes.json();
+      
+      if (!analyzeRes.ok) throw new Error(analysisData.error || "Failed to generate report.");
+      
+      setAiReport(analysisData.report);
+      
+    } catch (err: any) {
+      setError("AI Engine Error: " + err.message);
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
 
   const { categoryKey, metricKey, chartData } = getChartData();
@@ -141,8 +184,8 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto space-y-8">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Auto-Dash Simple</h1>
-            <p className="text-slate-500 mt-1">Instant, client-side CSV dashboarding.</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Auto-Dash Agentic</h1>
+            <p className="text-slate-500 mt-1">Client-side processing + Recursive AI Engine.</p>
           </div>
         </header>
 
@@ -154,7 +197,7 @@ export default function DashboardPage() {
               </div>
               <span className="text-lg font-semibold">Upload a CSV dataset</span>
               <span className="mt-2 text-sm text-slate-500">
-                All processing happens in your browser. No data is sent to a server.
+                Data will be masked before sending to the AI.
               </span>
               <input
                 type="file"
@@ -185,16 +228,55 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setData([]);
-                  setRawRowCount(0);
-                }}
-                className="rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
-              >
-                Upload New File
-              </button>
+              <div className="flex gap-4">
+                <button
+                  onClick={generateAIReport}
+                  disabled={isGeneratingReport}
+                  className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {isGeneratingReport ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing Recursively...
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="h-4 w-4" />
+                      Generate AI Report
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setData([]);
+                    setRawRowCount(0);
+                    setAiReport(null);
+                  }}
+                  className="rounded-md bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                >
+                  Upload New File
+                </button>
+              </div>
             </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg">
+                <AlertCircle className="h-5 w-5" />
+                <span className="text-sm font-medium">{error}</span>
+              </div>
+            )}
+
+            {aiReport && (
+              <div className="rounded-xl bg-indigo-50 p-6 shadow-sm border border-indigo-100 mb-6">
+                <div className="mb-4 flex items-center gap-2 border-b border-indigo-100 pb-4">
+                  <FileText className="h-6 w-6 text-indigo-700" />
+                  <h3 className="font-bold text-lg text-indigo-900">Agentic Analysis Report</h3>
+                </div>
+                <div className="prose prose-indigo max-w-none text-slate-800 whitespace-pre-wrap">
+                  {aiReport}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
