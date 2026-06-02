@@ -28,57 +28,69 @@ export default function DashboardPage() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [aiReport, setAiReport] = useState<string | null>(null);
 
-  const onFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const onFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    setFileName(file.name);
+    const names = Array.from(files).map(f => f.name).join(", ");
+    setFileName(names.length > 50 ? `${files.length} files selected` : names);
     setError("");
     setAiReport(null);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      let text = e.target?.result as string;
-      
-      const lines = text.split(/\r?\n/);
-      const headerIndex = lines.findIndex(line => (line.match(/,/g) || []).length >= 2);
-      if (headerIndex > 0) {
-        text = lines.slice(headerIndex).join('\n');
+    try {
+      const allParsedData: any[] = [];
+      let totalRaw = 0;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileData = await new Promise<any[]>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            let text = e.target?.result as string;
+            const lines = text.split(/\r?\n/);
+            const headerIndex = lines.findIndex(line => (line.match(/,/g) || []).length >= 2);
+            if (headerIndex > 0) {
+              text = lines.slice(headerIndex).join('\n');
+            }
+            Papa.parse(text, {
+              header: true,
+              dynamicTyping: true,
+              skipEmptyLines: true,
+              complete: (results) => {
+                if (results.errors.length > 0 && results.data.length === 0) {
+                  reject(new Error(`Error parsing ${file.name}`));
+                  return;
+                }
+                const parsed = results.data as Record<string, unknown>[];
+                resolve(parsed.map(row => ({ ...row, Source_File: file.name })));
+              },
+              error: (err: any) => reject(new Error(err.message))
+            });
+          };
+          reader.readAsText(file);
+        });
+        totalRaw += fileData.length;
+        allParsedData.push(...fileData);
       }
 
-      Papa.parse(text, {
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.errors.length > 0 && results.data.length === 0) {
-            setError("Error parsing CSV. Please check the format.");
-            return;
-          }
+      if (allParsedData.length === 0) {
+        setError("CSV files are empty.");
+        return;
+      }
 
-          const parsedData = results.data as Record<string, unknown>[];
-          if (parsedData.length === 0) {
-            setError("CSV is empty.");
-            return;
-          }
+      const cleanedData = cleanData(allParsedData);
+      if (cleanedData.length === 0) {
+        setError("No usable rows remained after cleaning.");
+        return;
+      }
 
-          const cleanedData = cleanData(parsedData);
-          if (cleanedData.length === 0) {
-            setError("No usable rows remained after cleaning.");
-            return;
-          }
-
-          const headers = Object.keys(cleanedData[0] as object);
-          setRawRowCount(parsedData.length);
-          setColumns(headers);
-          setData(cleanedData);
-        },
-        error: (err: any) => {
-          setError(err.message);
-        },
-      });
-    };
-    reader.readAsText(file);
+      const headers = Object.keys(cleanedData[0] as object);
+      setRawRowCount(totalRaw);
+      setColumns(headers);
+      setData(cleanedData);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   const getChartData = () => {
@@ -195,14 +207,15 @@ export default function DashboardPage() {
               <div className="rounded-full bg-blue-50 p-4 text-blue-600 mb-4">
                 <UploadCloud className="h-8 w-8" />
               </div>
-              <span className="text-lg font-semibold">Upload a CSV dataset</span>
+              <span className="text-lg font-semibold">Upload CSV datasets</span>
               <span className="mt-2 text-sm text-slate-500">
-                Data will be masked before sending to the AI.
+                You can select multiple files. Data will be combined & masked.
               </span>
               <input
                 type="file"
                 className="sr-only"
                 accept=".csv"
+                multiple
                 onChange={onFileUpload}
               />
             </label>
