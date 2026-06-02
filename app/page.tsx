@@ -158,7 +158,7 @@ export default function DashboardPage() {
     try {
       const datasetId = "dataset_" + Date.now();
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+      const apiUrl = "https://auto-agent-api-386032878543.us-central1.run.app";
       const uploadRes = await fetch(`${apiUrl}/api/data-agent/upload-dataset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
